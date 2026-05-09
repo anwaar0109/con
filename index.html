@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consistency — Anwaar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #05050f;
+    --surface: rgba(255,255,255,0.04);
+    --surface2: rgba(255,255,255,0.07);
+    --border: rgba(255,255,255,0.08);
+    --text: #e8e3da;
+    --muted: #4a4a6a;
+    --amber: #f5a623;
+    --amber-glow: rgba(245,166,35,0.18);
+    --green: #4ade80;
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 44px 20px 80px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* ── SPACE BACKGROUND ── */
+  #space-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Nebula blobs */
+  .nebula {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .nebula-1 {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(80,40,180,0.18) 0%, transparent 70%);
+    top: -100px; left: -100px;
+  }
+
+  .nebula-2 {
+    width: 600px; height: 400px;
+    background: radial-gradient(circle, rgba(20,80,160,0.14) 0%, transparent 70%);
+    top: 30%; right: -150px;
+  }
+
+  .nebula-3 {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(120,40,100,0.12) 0%, transparent 70%);
+    bottom: 10%; left: 20%;
+  }
+
+  .nebula-4 {
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(245,166,35,0.05) 0%, transparent 70%);
+    top: 60%; left: 60%;
+  }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  header { margin-bottom: 56px; }
+
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  header h1 em { color: var(--amber); font-style: normal; }
+
+  header p {
+    margin-top: 8px;
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .track { margin-bottom: 52px; }
+
+  .track-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .track-left { display: flex; align-items: baseline; gap: 12px; }
+
+  .track-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  .track-desc { font-size: 0.62rem; color: var(--muted); letter-spacing: 0.06em; }
+
+  .track-right { display: flex; align-items: center; gap: 14px; }
+
+  .track-count { font-size: 0.7rem; letter-spacing: 0.04em; }
+  .track-count b { color: var(--amber); font-family: 'Syne', sans-serif; font-size: 0.9rem; }
+
+  .track-streak { font-size: 0.62rem; color: var(--muted); letter-spacing: 0.05em; }
+  .track-streak b { color: var(--green); }
+
+  .track-missed { font-size: 0.62rem; color: var(--red); letter-spacing: 0.05em; opacity: 0.8; }
+
+  .reset-btn {
+    font-size: 0.6rem; color: var(--muted); background: none; border: none;
+    cursor: pointer; font-family: 'DM Mono', monospace; letter-spacing: 0.05em;
+    text-decoration: underline; padding: 0; transition: color 0.2s;
+  }
+  .reset-btn:hover { color: var(--red); }
+
+  .track-bar { height: 2px; background: var(--border); border-radius: 2px; margin-bottom: 16px; overflow: hidden; }
+  .track-bar-fill { height: 100%; background: var(--amber); border-radius: 2px; transition: width 0.5s ease; }
+
+  .day-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .day-cell {
+    width: 46px;
+    height: 46px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.03);
+    border: 1.5px solid var(--amber);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--amber);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.13s cubic-bezier(0.4,0,0.2,1);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .day-cell:hover:not(.future):not(.missed) {
+    background: var(--amber-glow);
+    transform: scale(1.07);
+    z-index: 1;
+  }
+
+  .day-cell:active:not(.future):not(.missed) { transform: scale(0.94); }
+
+  .day-cell.done {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: #05050f;
+  }
+
+  .day-cell.done:hover {
+    background: #d4891e;
+    border-color: #d4891e;
+    color: #05050f;
+  }
+
+  .day-cell.today {
+    border-color: var(--amber);
+    color: var(--amber);
+    box-shadow: 0 0 0 1px var(--amber), 0 0 12px var(--amber-glow);
+  }
+
+  .day-cell.today.done {
+    background: var(--amber);
+    color: #05050f;
+    box-shadow: 0 0 18px var(--amber-glow);
+  }
+
+  .day-cell.today:not(.done)::after {
+    content: '';
+    position: absolute;
+    bottom: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--amber);
+  }
+
+  .day-cell.missed {
+    background: var(--red-dim);
+    border-color: var(--red);
+    color: var(--red);
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  .day-cell.future {
+    background: rgba(255,255,255,0.02);
+    border-color: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.15);
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .divider { height: 1px; background: var(--border); margin-bottom: 52px; }
+
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(50px);
+    background: rgba(10,10,20,0.95);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 18px;
+    border-radius: 100px;
+    font-size: 0.68rem;
+    letter-spacing: 0.07em;
+    opacity: 0;
+    transition: all 0.22s ease;
+    z-index: 999;
+    white-space: nowrap;
+    pointer-events: none;
+    backdrop-filter: blur(10px);
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  @media (max-width: 480px) {
+    .day-cell { width: 38px; height: 38px; font-size: 0.7rem; border-radius: 7px; }
+    .day-grid { gap: 5px; }
+    .track-left { flex-direction: column; gap: 2px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Nebula blobs -->
+<div class="nebula nebula-1"></div>
+<div class="nebula nebula-2"></div>
+<div class="nebula nebula-3"></div>
+<div class="nebula nebula-4"></div>
+
+<!-- Star canvas -->
+<canvas id="space-canvas"></canvas>
+
+<div class="container">
+  <header>
+    <h1>Stay <em>Consistent.</em></h1>
+    <p>Don't break the chain — Anwaar</p>
+  </header>
+  <div id="tracks"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STARS ────────────────────────────────────────────────────
+(function() {
+  const canvas = document.getElementById('space-canvas');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = document.body.scrollHeight;
+  }
+
+  function initStars() {
+    stars = [];
+    const count = Math.floor((canvas.width * canvas.height) / 4000);
+    for (let i = 0; i < count; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.4 + 0.2,
+        a: Math.random() * 0.8 + 0.2,
+        speed: Math.random() * 0.3 + 0.05,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  let frame = 0;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    frame += 0.008;
+    stars.forEach(s => {
+      const twinkle = s.a * (0.6 + 0.4 * Math.sin(frame * s.speed + s.phase));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(220, 210, 255, ${twinkle})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+
+  function init() {
+    resize();
+    initStars();
+    draw();
+  }
+
+  window.addEventListener('resize', () => { resize(); initStars(); });
+  // Re-init after DOM renders fully for correct scroll height
+  window.addEventListener('load', init);
+  init();
+})();
+
+// ── TRACKER ──────────────────────────────────────────────────
+const TRACKS = [
+  { id: 'pinterest', title: 'Pinterest',              days: 90, desc: 'daily pins — 90 day commitment' },
+  { id: 'jobs',      title: 'Job Applications',        days: 30, desc: '2 real applications per day'   },
+  { id: 'outreach',  title: 'Shopify Client Outreach', days: 30, desc: '1 client DM per day'           }
+];
+
+const KEY = 'consistency_v3';
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || {}; }
+  catch(e) { return {}; }
+}
+
+function persist(data) { localStorage.setItem(KEY, JSON.stringify(data)); }
+
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+
+function shiftDate(base, n) {
+  const d = new Date(base);
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+function calcStreak(done) {
+  let s = 0;
+  const d = new Date(todayStr());
+  while (true) {
+    const k = d.toISOString().slice(0, 10);
+    if (done[k]) { s++; d.setDate(d.getDate() - 1); }
+    else break;
+  }
+  return s;
+}
+
+function render() {
+  const data = load();
+  const today = todayStr();
+  const wrap = document.getElementById('tracks');
+  wrap.innerHTML = '';
+
+  TRACKS.forEach((track, ti) => {
+    if (!data[track.id]) {
+      data[track.id] = { start: today, done: {} };
+      persist(data);
+    }
+
+    const ts = data[track.id];
+    const doneCount = Object.values(ts.done).filter(Boolean).length;
+    const s = calcStreak(ts.done);
+    const pct = Math.round((doneCount / track.days) * 100);
+
+    let missedCount = 0;
+    for (let i = 0; i < track.days; i++) {
+      const date = shiftDate(ts.start, i);
+      if (date < today && !ts.done[date]) missedCount++;
+    }
+
+    const block = document.createElement('div');
+    block.className = 'track';
+    block.innerHTML = `
+      <div class="track-header">
+        <div class="track-left">
+          <div class="track-title">${track.title}</div>
+          <div class="track-desc">${track.desc}</div>
+        </div>
+        <div class="track-right">
+          <div class="track-streak">streak <b>${s}</b></div>
+          ${missedCount > 0 ? `<div class="track-missed">${missedCount} missed</div>` : ''}
+          <div class="track-count"><b>${doneCount}</b> / ${track.days}</div>
+          <button class="reset-btn" data-id="${track.id}">reset</button>
+        </div>
+      </div>
+      <div class="track-bar"><div class="track-bar-fill" style="width:${pct}%"></div></div>
+      <div class="day-grid" id="grid-${track.id}"></div>
+    `;
+
+    wrap.appendChild(block);
+    if (ti < TRACKS.length - 1) {
+      const div = document.createElement('div');
+      div.className = 'divider';
+      wrap.appendChild(div);
+    }
+
+    const grid = block.querySelector(`#grid-${track.id}`);
+    for (let i = 0; i < track.days; i++) {
+      const date = shiftDate(ts.start, i);
+      const cell = document.createElement('div');
+      cell.className = 'day-cell';
+      cell.textContent = i + 1;
+
+      const isPast   = date < today;
+      const isToday  = date === today;
+      const isFuture = date > today;
+      const isDone   = !!ts.done[date];
+      const isMissed = isPast && !isDone;
+
+      if (isFuture)      cell.classList.add('future');
+      else if (isMissed) cell.classList.add('missed');
+      else if (isToday)  cell.classList.add('today');
+      if (isDone)        cell.classList.add('done');
+
+      if (!isFuture && !isMissed) {
+        cell.addEventListener('click', () => {
+          const d2 = load();
+          const was = d2[track.id].done[date];
+          if (was) delete d2[track.id].done[date];
+          else d2[track.id].done[date] = true;
+          persist(d2);
+          showToast(!was ? `Day ${i + 1} done ✓` : `Day ${i + 1} undone`);
+          render();
+          // Resize canvas after re-render
+          setTimeout(() => {
+            const c = document.getElementById('space-canvas');
+            c.height = document.body.scrollHeight;
+          }, 100);
+        });
+      } else if (isMissed) {
+        cell.addEventListener('click', () => showToast('Missed — locked forever.'));
+      }
+
+      grid.appendChild(cell);
+    }
+  });
+
+  wrap.querySelectorAll('.reset-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      const name = TRACKS.find(t => t.id === id).title;
+      if (confirm(`Reset "${name}"? All progress will be cleared.`)) {
+        const d2 = load();
+        d2[id] = { start: todayStr(), done: {} };
+        persist(d2);
+        showToast(`${name} reset.`);
+        render();
+      }
+    });
+  });
+}
+
+let toastT;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+render();
+</script>
+</body>
+</html>
